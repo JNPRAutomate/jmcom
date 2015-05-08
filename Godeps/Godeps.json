@@ -1,0 +1,18 @@
+{
+	"ImportPath": "github.com/jnprautomate/jmcom",
+	"GoVersion": "go1.4.2",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Juniper/go-netconf/netconf",
+			"Rev": "65f62e43149e0c904c8184d9570c15ba695ebe84"
+		},
+		{
+			"ImportPath": "github.com/ziutek/telnet",
+			"Rev": "49d9be70897fe0a7400a152121453075b2835866"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "24ffb5feb3312a39054178a4b0a4554fc2201248"
+		}
+	]
+}
