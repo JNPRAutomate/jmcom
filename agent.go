@@ -8,13 +8,32 @@ import (
 
 //Agent agent to connect and issue commands to hosts
 type Agent struct {
-	Username   string
-	Password   string
-	Key        string
-	Host       string
-	Session    *netconf.Session
-	MsgChannel chan Message
-	parser     Parser
+	SessionID   int
+	Username    string
+	Password    string
+	Key         string
+	Host        string
+	Session     *netconf.Session
+	CtrlChannel chan Message
+	MsgChannel  chan Message
+	parser      Parser
+}
+
+//Run set agent to run commands
+func (a *Agent) Run() {
+	a.Dial()
+
+	for {
+		select {
+		case msg := <-a.CtrlChannel:
+			if msg.Command == "" {
+				a.Close()
+				return
+			} else if msg.Command != "" {
+
+			}
+		}
+	}
 }
 
 //Dial connect to host
@@ -25,6 +44,7 @@ func (a *Agent) Dial() {
 		if err != nil {
 			a.returnMsg("", "", err)
 		}
+		a.SessionID = a.Session.SessionID
 	}
 }
 

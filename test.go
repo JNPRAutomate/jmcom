@@ -6,10 +6,10 @@ import (
 	"github.com/Juniper/go-netconf/netconf"
 )
 
-func main() {
+func foo() {
 	username := "root"
-	password := "Juniper"
-	host := "10.0.1.150"
+	password := "Embe1mpls"
+	host := "172.19.100.49"
 
 	s, err := netconf.DialSSH(host, netconf.SSHConfigPassword(username, password))
 	if err != nil {

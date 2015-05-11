@@ -7,6 +7,11 @@
 			"Rev": "65f62e43149e0c904c8184d9570c15ba695ebe84"
 		},
 		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.7.3-4-gaaf92c9",
+			"Rev": "aaf92c95712104318fc35409745f1533aa5ff327"
+		},
+		{
 			"ImportPath": "github.com/ziutek/telnet",
 			"Rev": "49d9be70897fe0a7400a152121453075b2835866"
 		},
