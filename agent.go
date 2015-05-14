@@ -36,7 +36,6 @@ func (a *Agent) Run() {
 			}
 		}
 	}
-
 }
 
 //Dial connect to host
@@ -70,5 +69,5 @@ func (a *Agent) RunCommand(command string) {
 		a.returnMsg(reply.Data, command, err)
 	}
 	v := a.parser.Trim(reply.Data)
-	a.returnMsg(v, command, nil)
+	a.returnMsg(v, command, err)
 }

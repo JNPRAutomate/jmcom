@@ -12,6 +12,10 @@
 			"Rev": "aaf92c95712104318fc35409745f1533aa5ff327"
 		},
 		{
+			"ImportPath": "github.com/kardianos/osext",
+			"Rev": "8fef92e41e22a70e700a96b29f066cda30ea24ef"
+		},
+		{
 			"ImportPath": "github.com/ziutek/telnet",
 			"Rev": "49d9be70897fe0a7400a152121453075b2835866"
 		},

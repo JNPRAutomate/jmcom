@@ -1,15 +1,21 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/kardianos/osext"
 )
 
+//Tool globals
 var msgChannel chan Message
 var ctrlChans map[string]chan Message
+var logFiles map[string]*os.File
 var hosts string
 var user string
 var password string
@@ -34,15 +40,30 @@ func init() {
 	flag.StringVar(&commandFile, "cmd-file", "", "File to load commands from")
 	flag.BoolVar(&logs, "log", false, "Log output for each host to a seperate file")
 	flag.StringVar(&logLocation, "logdir", "", "Directory to write logs to. Default is current directory")
-	//offer logging to single or multiple files
 }
 
 func main() {
 	flag.Parse()
-	//Check variables
-	//Spawn agent per connection
+
+	//create channels for communication
 	msgChannel = make(chan Message)
 	ctrlChans = make(map[string]chan Message)
+	//Create map for logging
+	logFiles = make(map[string]*os.File)
+
+	//Split hosts
+	hs := strings.Split(hosts, ",")
+
+	//setup log files
+	if logs {
+		for _, v := range hs {
+			var err error
+			logFiles[v], err = OpenLog(logLocation, v)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
 
 	recWg.Add(1)
 	go func() {
@@ -52,7 +73,13 @@ func main() {
 				if chanOpen && msg.Error != nil {
 					log.Errorf("Session %d error: %s", msg.SessionID, msg.Error)
 				} else if chanOpen && msg.Data != "" && msg.Host != "" {
-					log.Printf("Host %s SessionID %d\n%s", msg.Host, msg.SessionID, msg.Data)
+					if logs {
+						log.SetOutput(logFiles[msg.Host])
+						log.Printf("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
+						log.SetOutput(os.Stdout)
+					} else {
+						log.Printf("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
+					}
 					commandWg.Done()
 				} else {
 					recWg.Done()
@@ -63,7 +90,6 @@ func main() {
 	}()
 
 	if hosts != "" && user != "" && password != "" {
-		hs := strings.Split(hosts, ",")
 		for _, v := range hs {
 			ctrlChans[v] = make(chan Message)
 			connectWg.Add(1)
@@ -89,5 +115,22 @@ func main() {
 		close(ctrlChans[item])
 	}
 	recWg.Wait()
-	log.Println("Complete")
+	log.Println("Tasks Complete")
+}
+
+//OpenLog open log file for writing
+func OpenLog(path string, filename string) (*os.File, error) {
+	if path == "" {
+		//use current directory
+		curdir, err := osext.ExecutableFolder()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		dir, err := filepath.Abs(filepath.Dir(strings.Join([]string{curdir, filename}, "/")))
+		if err != nil {
+			log.Fatal(err)
+		}
+		return os.OpenFile(strings.Join([]string{dir, strings.Join([]string{filename, ".log"}, "")}, "/"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+	}
+	return &os.File{}, errors.New("Unable to determine path for writing")
 }
