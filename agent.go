@@ -60,14 +60,12 @@ func (a *Agent) Close() {
 }
 
 func (a *Agent) returnMsg(data string, command string, err error) {
-	log.Errorln(err)
 	a.MsgChannel <- Message{Host: a.Host, SessionID: a.SessionID, Command: command, Data: data, Error: err}
 }
 
 //RunCommand Run a command against a host
 func (a *Agent) RunCommand(command string) {
 	reply, err := a.Session.Exec(netconf.RawMethod(fmt.Sprintf("<command format=\"ascii\">%s</command>", command)))
-	log.Errorln(reply, err)
 	if err != nil {
 		a.returnMsg(reply.Data, command, err)
 	}
