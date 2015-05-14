@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"sync"
 
 	"github.com/Juniper/go-netconf/netconf"
+	log "github.com/Sirupsen/logrus"
 )
 
 //Agent agent to connect and issue commands to hosts
@@ -18,6 +19,7 @@ type Agent struct {
 	CtrlChannel chan Message
 	MsgChannel  chan Message
 	parser      Parser
+	connectWg   sync.WaitGroup
 }
 
 //Run set agent to run commands
@@ -47,6 +49,8 @@ func (a *Agent) Dial() {
 			return
 		}
 		a.SessionID = a.Session.SessionID
+		log.Infoln("Connected to", a.Host)
+		connectWg.Done()
 	}
 }
 
@@ -56,12 +60,14 @@ func (a *Agent) Close() {
 }
 
 func (a *Agent) returnMsg(data string, command string, err error) {
+	log.Errorln(err)
 	a.MsgChannel <- Message{Host: a.Host, SessionID: a.SessionID, Command: command, Data: data, Error: err}
 }
 
 //RunCommand Run a command against a host
 func (a *Agent) RunCommand(command string) {
 	reply, err := a.Session.Exec(netconf.RawMethod(fmt.Sprintf("<command format=\"ascii\">%s</command>", command)))
+	log.Errorln(reply, err)
 	if err != nil {
 		a.returnMsg(reply.Data, command, err)
 	}
