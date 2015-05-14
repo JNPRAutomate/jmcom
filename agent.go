@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Juniper/go-netconf/netconf"
 )
@@ -22,18 +23,18 @@ type Agent struct {
 //Run set agent to run commands
 func (a *Agent) Run() {
 	a.Dial()
-
 	for {
 		select {
-		case msg := <-a.CtrlChannel:
-			if msg.Command == "" {
+		case msg, chanOpen := <-a.CtrlChannel:
+			if chanOpen {
+				a.RunCommand(msg.Command)
+			} else {
 				a.Close()
 				return
-			} else if msg.Command != "" {
-
 			}
 		}
 	}
+
 }
 
 //Dial connect to host
@@ -43,6 +44,7 @@ func (a *Agent) Dial() {
 		a.Session, err = netconf.DialSSH(a.Host, netconf.SSHConfigPassword(a.Username, a.Password))
 		if err != nil {
 			a.returnMsg("", "", err)
+			return
 		}
 		a.SessionID = a.Session.SessionID
 	}
@@ -54,7 +56,7 @@ func (a *Agent) Close() {
 }
 
 func (a *Agent) returnMsg(data string, command string, err error) {
-	a.MsgChannel <- Message{Host: a.Host, Command: command, Data: data, Error: err}
+	a.MsgChannel <- Message{Host: a.Host, SessionID: a.SessionID, Command: command, Data: data, Error: err}
 }
 
 //RunCommand Run a command against a host

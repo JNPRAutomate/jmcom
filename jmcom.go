@@ -4,11 +4,14 @@ import (
 	"flag"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
 
-var ctrlChannel map[string]chan Message
+var msgChannel chan Message
+var ctrlChannel chan Message
+var ctrlChans map[string]chan Message
 var hosts string
 var user string
 var password string
@@ -28,20 +31,54 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
 	//Check variables
 	//Spawn agent per connection
+	msgChannel = make(chan Message)
+	ctrlChannel = make(chan Message)
+	ctrlChans = make(map[string]chan Message)
+
+	go func() {
+		for {
+			select {
+			case msg, chanOpen := <-msgChannel:
+				if chanOpen && msg.Error != nil {
+					//handle error
+					log.Errorf("Session %d error: %s", msg.SessionID, msg.Error)
+				} else if chanOpen && msg.Data != "" && msg.Host != "" {
+					log.Printf("Host %s SessionID %d\n%s", msg.Host, msg.SessionID, msg.Data)
+					wg.Done()
+				} else {
+					log.Println("CLOSED")
+					return
+				}
+			}
+		}
+	}()
 
 	if hosts != "" && user != "" && password != "" {
 		hs := strings.Split(hosts, ",")
 		for _, v := range hs {
-			ctrlChannel[v] = make(chan Message)
-			a := &Agent{Username: user, Password: password, Host: v, CtrlChannel: ctrlChannel[v]}
+			ctrlChans[v] = make(chan Message)
+			a := &Agent{Username: user, Password: password, Host: v, CtrlChannel: ctrlChans[v], MsgChannel: msgChannel}
 			wg.Add(1)
-			log.Println("Connecting to ", v)
+			log.Println("Connecting to", v)
 			go a.Run()
 		}
 	}
+	time.Sleep(10 * time.Second)
 	//Run command against hosts
+	log.Println(command)
+	for item := range ctrlChans {
+		ctrlChans[item] <- Message{Command: command}
+	}
 
 	//return results
+	wg.Wait()
+	close(msgChannel)
+	close(ctrlChannel)
+	for item := range ctrlChans {
+		close(ctrlChans[item])
+	}
+	log.Println("Complete")
 }
