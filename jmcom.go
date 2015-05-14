@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"os"
@@ -10,6 +11,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
+)
+
+const (
+	MaxFileSize = 1024000
 )
 
 //Tool globals
@@ -23,6 +28,7 @@ var commands string
 var commandFile string
 var logs bool
 var logLocation string
+var cmds []string
 var hostsFile string
 var commandWg sync.WaitGroup
 var connectWg sync.WaitGroup
@@ -53,6 +59,26 @@ func main() {
 
 	//Split hosts
 	hs := strings.Split(hosts, ",")
+	cmds = strings.Split(commands, ",")
+
+	//setup command file
+	if commandFile != "" {
+		fl, err := filepath.Abs(commandFile)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		f, err := os.Open(fl)
+		defer f.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		cb := make([]byte, MaxFileSize)
+		_, err = f.Read(cb)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		cmds = strings.Split(string(bytes.Trim(cb, "\x00")), "\n")
+	}
 
 	//setup log files
 	if logs {
@@ -100,11 +126,13 @@ func main() {
 	}
 	connectWg.Wait()
 	//Run command against hosts
-	cmds := strings.Split(commands, ",")
 	for _, v := range cmds {
-		for item := range ctrlChans {
-			commandWg.Add(1)
-			ctrlChans[item] <- Message{Command: v}
+		c := strings.Replace(v, "\n", "", -1)
+		if len(c) > 3 {
+			for item := range ctrlChans {
+				commandWg.Add(1)
+				ctrlChans[item] <- Message{Command: c}
+			}
 		}
 	}
 
