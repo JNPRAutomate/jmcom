@@ -1,35 +1,35 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"flag"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/kardianos/osext"
-)
-
-const (
-	MaxFileSize = 1024000
 )
 
 //Tool globals
 var msgChannel chan Message
 var ctrlChans map[string]chan Message
 var logFiles map[string]*os.File
+var cmds []string
+
+//flags
 var hosts string
 var user string
 var password string
+var sshKey string
 var commands string
 var commandFile string
 var logs bool
-var logLocation string
-var cmds []string
+var passPrompt bool
 var hostsFile string
+var logLocation string
+
+//Wait Groups for syncing go routines
 var commandWg sync.WaitGroup
 var connectWg sync.WaitGroup
 var recWg sync.WaitGroup
@@ -41,6 +41,8 @@ func init() {
 	flag.StringVar(&hosts, "hosts", "", "Define hosts to connect to: 1.2.3.3 or 2.3.4.5,1.2.3.4")
 	flag.StringVar(&user, "user", "", "Specify the username to use against hosts")
 	flag.StringVar(&password, "password", "", "Specify password to use with hosts")
+	flag.StringVar(&sshKey, "key", "", "Specify SSH key to use")
+	flag.BoolVar(&passPrompt, "prompt", false, "Promots the user to enter a password interactively")
 	flag.StringVar(&commands, "command", "", "Commands to run against host: \"show version\" or for multiple commands \"show version\",\"show chassis hardware\"")
 	flag.StringVar(&hostsFile, "hosts-file", "", "File to load hosts from")
 	flag.StringVar(&commandFile, "cmd-file", "", "File to load commands from")
@@ -67,17 +69,11 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		f, err := os.Open(fl)
-		defer f.Close()
+		cmdFile, err := ioutil.ReadFile(fl)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		cb := make([]byte, MaxFileSize)
-		_, err = f.Read(cb)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		cmds = strings.Split(string(bytes.Trim(cb, "\x00")), "\n")
+		cmds = strings.Split(string(cmdFile), "\n")
 	}
 
 	//setup log files
@@ -144,21 +140,4 @@ func main() {
 	}
 	recWg.Wait()
 	log.Println("Tasks Complete")
-}
-
-//OpenLog open log file for writing
-func OpenLog(path string, filename string) (*os.File, error) {
-	if path == "" {
-		//use current directory
-		curdir, err := osext.ExecutableFolder()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		dir, err := filepath.Abs(filepath.Dir(strings.Join([]string{curdir, filename}, "/")))
-		if err != nil {
-			log.Fatal(err)
-		}
-		return os.OpenFile(strings.Join([]string{dir, strings.Join([]string{filename, ".log"}, "")}, "/"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
-	}
-	return &os.File{}, errors.New("Unable to determine path for writing")
 }

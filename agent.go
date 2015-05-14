@@ -50,6 +50,8 @@ func (a *Agent) Dial() {
 		a.SessionID = a.Session.SessionID
 		log.Infoln("Connected to", a.Host)
 		connectWg.Done()
+	} else if a.Username != "" && a.Password == "" && a.Key != "" {
+		//setup key based auth
 	}
 }
 
