@@ -63,6 +63,19 @@ func main() {
 	hs := strings.Split(hosts, ",")
 	cmds = strings.Split(commands, ",")
 
+	//Host file parsing
+	hp := &HostFileParser{}
+	h := []*HostProfile{}
+
+	//setup hosts from file
+	if hostsFile != "" {
+		var err error
+		h, err = hp.Parse(hostsFile)
+		if err != nil {
+			log.Fatalf("Unable to parse host file: %s", err)
+		}
+	}
+
 	//setup command file
 	if commandFile != "" {
 		fl, err := filepath.Abs(commandFile)
