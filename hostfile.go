@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/howeyc/gopass"
 )
 
@@ -41,11 +43,12 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 							hProfile.Username = line[l]
 						case 2:
 							if line[l] == "!!PROMPT!!" {
-								hProfile.Password = hp.PasswordPrompt(hProfile.Host)
+								hProfile.LoadPassword(hp.PasswordPrompt(hProfile.Host))
 							} else {
-								hProfile.Password = line[l]
+								hProfile.LoadPassword(line[l])
 							}
 						case 3:
+							hProfile.LoadKey(line[l])
 							hProfile.Key = line[l]
 						}
 					}
@@ -66,8 +69,37 @@ func (hp *HostFileParser) PasswordPrompt(hostname string) string {
 
 //HostProfile used as a profile for host configurations
 type HostProfile struct {
-	Username string
-	Password string
-	Host     string
-	Key      string
+	Username    string
+	Password    string
+	Host        string
+	Key         string
+	AuthMethods []ssh.AuthMethod
+}
+
+//LoadKey load SSH key into auth methods
+func (p *HostProfile) LoadKey(key string) error {
+	fl, err := filepath.Abs(key)
+	if err != nil {
+		return err
+	}
+	f, err := ioutil.ReadFile(fl)
+	if err != nil {
+		return err
+	}
+	k, err := ssh.ParsePrivateKey(f)
+	if err != nil {
+		return err
+	}
+	p.AuthMethods = append(p.AuthMethods, ssh.PublicKeys(k))
+	return nil
+}
+
+//LoadPassword load a password into auth methods
+func (p *HostProfile) LoadPassword(password string) {
+	p.AuthMethods = append(p.AuthMethods, ssh.Password(password))
+}
+
+//GetSSHClientConfig generates an ssh.ClientConfig to be use for SSH authentication
+func (p *HostProfile) GetSSHClientConfig() *ssh.ClientConfig {
+	return &ssh.ClientConfig{User: p.Username, Auth: p.AuthMethods}
 }
