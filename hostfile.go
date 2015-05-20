@@ -49,7 +49,6 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 							}
 						case 3:
 							hProfile.LoadKey(line[l])
-							hProfile.Key = line[l]
 						}
 					}
 				}
@@ -70,9 +69,7 @@ func (hp *HostFileParser) PasswordPrompt(hostname string) string {
 //HostProfile used as a profile for host configurations
 type HostProfile struct {
 	Username    string
-	Password    string
 	Host        string
-	Key         string
 	AuthMethods []ssh.AuthMethod
 }
 

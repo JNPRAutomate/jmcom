@@ -2,4 +2,5 @@ build:
 	godep go build .
 
 clean:
-	rm jmcom
+	-rm *.log
+	-rm jmcom

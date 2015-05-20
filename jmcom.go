@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/howeyc/gopass"
 )
 
 //Tool globals
@@ -17,6 +18,7 @@ var msgChannel chan Message
 var ctrlChans map[string]chan Message
 var logFiles map[string]*os.File
 var cmds []string
+var hostps []*HostProfile
 
 //flags
 var hosts string
@@ -54,6 +56,12 @@ func init() {
 func main() {
 	flag.Parse()
 
+	//ME list
+	// hosts sshKey password hostsFile
+
+	//MB list
+	//commands and commandFile
+
 	//create channels for communication
 	msgChannel = make(chan Message)
 	ctrlChans = make(map[string]chan Message)
@@ -61,24 +69,9 @@ func main() {
 	logFiles = make(map[string]*os.File)
 
 	//Split hosts
-	hs := strings.Split(hosts, ",")
-	cmds = strings.Split(commands, ",")
 
 	//Host file parsing
-	hp := &HostFileParser{}
-	h := []*HostProfile{}
-
-	//setup hosts from file
-	if hostsFile != "" {
-		var err error
-		h, err = hp.Parse(hostsFile)
-		if err != nil {
-			log.Fatalf("Unable to parse host file: %s", err)
-		}
-		for i := range h {
-			fmt.Printf("%#v\n", h[i])
-		}
-	}
+	hfp := &HostFileParser{}
 
 	//setup command file
 	if commandFile != "" {
@@ -90,22 +83,58 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		cmds = strings.Split(string(cmdFile), "\n")
+		cmds = append(cmds, strings.Split(string(cmdFile), "\n")...)
+	}
+
+	if commands != "" {
+		cmds = append(cmds, strings.Split(commands, ",")...)
+	}
+
+	//prompt for password if not defined
+	if passPrompt && password == "" {
+		password = promptPassword()
+	}
+
+	//setup hosts from file
+	if hostsFile != "" {
+		h, err := hfp.Parse(hostsFile)
+		if err != nil {
+			log.Fatalf("Unable to parse host file: %s", err)
+		}
+		hostps = append(hostps, h...)
+		for i := range h {
+			fmt.Printf("%#v\n", h[i])
+		}
+		hostps = append(hostps, h...)
+	}
+
+	if hosts != "" {
+		clihosts := strings.Split(hosts, ",")
+		for i := range clihosts {
+			hp := &HostProfile{Host: clihosts[i], Username: user}
+			if password != "" {
+				hp.LoadPassword(password)
+			}
+
+			if sshKey != "" {
+				err := hp.LoadKey(sshKey)
+				if err != nil {
+					log.Fatalf("Unable to load key specified by flag: %s", err)
+				}
+			}
+			hostps = append(hostps, hp)
+		}
 	}
 
 	//setup log files
 	if logs {
-		for _, v := range hs {
+		for _, v := range hostps {
 			var err error
-			logFiles[v], err = OpenLog(logLocation, v)
+			logFiles[v.Host], err = OpenLog(logLocation, v.Host)
 			if err != nil {
 				log.Fatalln(err)
 			}
 		}
-	}
-
-	if len(h) > 0 {
-		//pull command line args too
 	}
 
 	recWg.Add(1)
@@ -114,7 +143,10 @@ func main() {
 			select {
 			case msg, chanOpen := <-msgChannel:
 				if chanOpen && msg.Error != nil {
-					log.Errorf("Session %d error: %s", msg.SessionID, msg.Error)
+					log.Errorf("Host: %s error: %s", msg.Host, msg.Error)
+					if msg.SessionID == 0 && msg.Command == "" {
+						connectWg.Done()
+					}
 				} else if chanOpen && msg.Data != "" && msg.Host != "" {
 					if logs {
 						log.SetOutput(logFiles[msg.Host])
@@ -132,12 +164,12 @@ func main() {
 		}
 	}()
 
-	if hosts != "" && user != "" && password != "" {
-		for _, v := range hs {
-			ctrlChans[v] = make(chan Message)
+	if len(hostps) > 0 {
+		for i := range hostps {
+			ctrlChans[hostps[i].Host] = make(chan Message)
 			connectWg.Add(1)
-			a := &Agent{HostProfile: &HostProfile{Username: user, Password: password, Host: v}, connectWg: connectWg, CtrlChannel: ctrlChans[v], MsgChannel: msgChannel}
-			log.Println("Connecting to", v)
+			a := &Agent{HostProfile: hostps[i], connectWg: connectWg, CtrlChannel: ctrlChans[hostps[i].Host], MsgChannel: msgChannel}
+			log.Println("Connecting to", hostps[i].Host)
 			go a.Run()
 		}
 	}
@@ -160,5 +192,15 @@ func main() {
 		close(ctrlChans[item])
 	}
 	recWg.Wait()
+	if len(ctrlChans) == 0 {
+		flag.PrintDefaults()
+		return
+	}
 	log.Println("Tasks Complete")
+}
+
+func promptPassword() string {
+	fmt.Printf("Enter password: ")
+	text := gopass.GetPasswdMasked()
+	return string(text)
 }

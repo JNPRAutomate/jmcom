@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -21,7 +22,10 @@ type Agent struct {
 
 //Run set agent to run commands
 func (a *Agent) Run() {
-	a.Dial()
+	err := a.dial()
+	if err != nil {
+		return
+	}
 	for {
 		select {
 		case msg, chanOpen := <-a.CtrlChannel:
@@ -36,20 +40,23 @@ func (a *Agent) Run() {
 }
 
 //Dial connect to host
-func (a *Agent) Dial() {
+func (a *Agent) dial() error {
 	var err error
-	if a.HostProfile.Username != "" && a.HostProfile.Password != "" {
-		a.Session, err = netconf.DialSSH(a.HostProfile.Host, netconf.SSHConfigPassword(a.HostProfile.Username, a.HostProfile.Password))
+	if a.HostProfile.Username != "" && len(a.HostProfile.GetSSHClientConfig().Auth) > 0 {
+		a.Session, err = netconf.DialSSH(a.HostProfile.Host, a.HostProfile.GetSSHClientConfig())
 		if err != nil {
 			a.returnMsg("", "", err)
-			return
+			return err
 		}
 		a.SessionID = a.Session.SessionID
 		log.Infoln("Connected to", a.HostProfile.Host)
-		connectWg.Done()
-	} else if a.HostProfile.Username != "" && a.HostProfile.Password == "" && a.HostProfile.Key != "" {
-		//setup key based auth
+		a.connectWg.Done()
+		return nil
 	}
+	a.connectWg.Done()
+	err = errors.New("Host Profile incorrectly defined")
+	a.returnMsg("", "", err)
+	return err
 }
 
 //Close close session to host
