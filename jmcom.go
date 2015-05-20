@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -74,6 +75,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("Unable to parse host file: %s", err)
 		}
+		for i := range h {
+			fmt.Printf("%#v\n", h[i])
+		}
 	}
 
 	//setup command file
@@ -98,6 +102,10 @@ func main() {
 				log.Fatalln(err)
 			}
 		}
+	}
+
+	if len(h) > 0 {
+		//pull command line args too
 	}
 
 	recWg.Add(1)
@@ -128,7 +136,7 @@ func main() {
 		for _, v := range hs {
 			ctrlChans[v] = make(chan Message)
 			connectWg.Add(1)
-			a := &Agent{Username: user, Password: password, Host: v, connectWg: connectWg, CtrlChannel: ctrlChans[v], MsgChannel: msgChannel}
+			a := &Agent{HostProfile: &HostProfile{Username: user, Password: password, Host: v}, connectWg: connectWg, CtrlChannel: ctrlChans[v], MsgChannel: msgChannel}
 			log.Println("Connecting to", v)
 			go a.Run()
 		}

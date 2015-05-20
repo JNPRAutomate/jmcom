@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+
+	"github.com/howeyc/gopass"
 )
 
 //HostFileParser used for parsing CSV files
@@ -37,7 +40,11 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 						case 1:
 							hProfile.Username = line[l]
 						case 2:
-							hProfile.Password = line[l]
+							if line[l] == "!!PROMPT!!" {
+								hProfile.Password = hp.PasswordPrompt(hProfile.Host)
+							} else {
+								hProfile.Password = line[l]
+							}
 						case 3:
 							hProfile.Key = line[l]
 						}
@@ -51,8 +58,10 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 }
 
 //PasswordPrompt prompt a user for an interactive password
-func (hp *HostFileParser) PasswordPrompt() {
-
+func (hp *HostFileParser) PasswordPrompt(hostname string) string {
+	fmt.Printf("Enter password for %s: ", hostname)
+	text := gopass.GetPasswdMasked()
+	return string(text)
 }
 
 //HostProfile used as a profile for host configurations

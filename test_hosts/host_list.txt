@@ -1,5 +1,6 @@
 # Special Option !!PROMPT!! prompts user for password
 #host,username,password,keyfile
-devops-qfx5100-01-me0.spglab.juniper.net,root,!!PROMPT!!,""
-172.19.100.51,root,!!PROMPT!!,""
+devops-qfx5100-01-me0.spglab.juniper.net,root,!!PROMPT!!,
+172.19.100.51,root,!!PROMPT!!,
 172.19.100.51,root,!!PROMPT!!,~/.ssh/id_rsa_host
+10.0.1.1,root,doos
