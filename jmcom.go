@@ -38,8 +38,6 @@ var connectWg sync.WaitGroup
 var recWg sync.WaitGroup
 
 func init() {
-	//TODO: Add CSV and SSH key support
-
 	//Define flags for calling script
 	flag.StringVar(&hosts, "hosts", "", "Define hosts to connect to: 1.2.3.3 or 2.3.4.5,1.2.3.4")
 	flag.StringVar(&user, "user", "", "Specify the username to use against hosts")
@@ -56,11 +54,26 @@ func init() {
 func main() {
 	flag.Parse()
 
+	//prompt for password if not defined
+	if passPrompt && password == "" {
+		password = promptPassword()
+	}
+
 	//ME list
 	// hosts sshKey password hostsFile
+	if hosts != "" && hostsFile != "" {
+		log.Infoln("Combining command line hosts with host from host file")
+	}
+
+	if sshKey != "" && password != "" {
+		log.Infoln("Using both ssh key and password as auth methods")
+	}
 
 	//MB list
 	//commands and commandFile
+	if commands != "" && commandFile != "" {
+		log.Infoln("Combining command line commands with command file command set")
+	}
 
 	//create channels for communication
 	msgChannel = make(chan Message)
@@ -71,7 +84,7 @@ func main() {
 	//Split hosts
 
 	//Host file parsing
-	hfp := &HostFileParser{}
+	hfp := &HostFileParser{GlobalPassword: password, GlobalKey: sshKey}
 
 	//setup command file
 	if commandFile != "" {
@@ -90,11 +103,6 @@ func main() {
 		cmds = append(cmds, strings.Split(commands, ",")...)
 	}
 
-	//prompt for password if not defined
-	if passPrompt && password == "" {
-		password = promptPassword()
-	}
-
 	//setup hosts from file
 	if hostsFile != "" {
 		h, err := hfp.Parse(hostsFile)
@@ -108,6 +116,7 @@ func main() {
 		hostps = append(hostps, h...)
 	}
 
+	//setup hosts
 	if hosts != "" {
 		clihosts := strings.Split(hosts, ",")
 		for i := range clihosts {
@@ -193,6 +202,7 @@ func main() {
 	}
 	recWg.Wait()
 	if len(ctrlChans) == 0 {
+		//no connections initiated, the user needs help
 		flag.PrintDefaults()
 		return
 	}

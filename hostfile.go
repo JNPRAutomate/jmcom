@@ -13,7 +13,9 @@ import (
 
 //HostFileParser used for parsing CSV files
 type HostFileParser struct {
-	Hosts []HostProfile
+	GlobalPassword string
+	GlobalKey      string
+	Hosts          []HostProfile
 }
 
 //Parse parse
@@ -50,6 +52,14 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 						case 3:
 							hProfile.LoadKey(line[l])
 						}
+					}
+				}
+				if len(hProfile.AuthMethods) == 0 {
+					if hp.GlobalKey != "" {
+						hProfile.LoadKey(hp.GlobalKey)
+					}
+					if hp.GlobalPassword != "" {
+						hProfile.LoadPassword(hp.GlobalPassword)
 					}
 				}
 				hostP = append(hostP, hProfile)
