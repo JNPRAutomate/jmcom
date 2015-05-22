@@ -54,6 +54,7 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 						}
 					}
 				}
+				//load the global key and or password if not methids are specified
 				if len(hProfile.AuthMethods) == 0 {
 					if hp.GlobalKey != "" {
 						hProfile.LoadKey(hp.GlobalKey)

@@ -3,10 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/Juniper/go-netconf/netconf"
-	log "github.com/Sirupsen/logrus"
 )
 
 //Agent agent to connect and issue commands to hosts
@@ -17,15 +15,16 @@ type Agent struct {
 	CtrlChannel chan Message
 	MsgChannel  chan Message
 	parser      Parser
-	connectWg   sync.WaitGroup
 }
 
 //Run set agent to run commands
 func (a *Agent) Run() {
 	err := a.dial()
 	if err != nil {
+		a.returnMsg("", "", err)
 		return
 	}
+	a.returnMsg("", "", nil)
 	for {
 		select {
 		case msg, chanOpen := <-a.CtrlChannel:
@@ -45,17 +44,12 @@ func (a *Agent) dial() error {
 	if a.HostProfile.Username != "" && len(a.HostProfile.GetSSHClientConfig().Auth) > 0 {
 		a.Session, err = netconf.DialSSH(a.HostProfile.Host, a.HostProfile.GetSSHClientConfig())
 		if err != nil {
-			a.returnMsg("", "", err)
 			return err
 		}
 		a.SessionID = a.Session.SessionID
-		log.Infoln("Connected to", a.HostProfile.Host)
-		a.connectWg.Done()
 		return nil
 	}
-	a.connectWg.Done()
 	err = errors.New("Host Profile incorrectly defined")
-	a.returnMsg("", "", err)
 	return err
 }
 

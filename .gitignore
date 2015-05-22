@@ -25,6 +25,9 @@ _testmain.go
 
 #remove binary
 jmcom
+jmcom_linux*
+jmcom_windows*
+jmcom_darwin*
 
 #remove log files
 *.log

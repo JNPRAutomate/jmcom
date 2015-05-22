@@ -33,8 +33,11 @@ var hostsFile string
 var logLocation string
 
 //Wait Groups for syncing go routines
-var commandWg sync.WaitGroup
+var commandsWg sync.WaitGroup
 var connectWg sync.WaitGroup
+
+//sync so all commands are run at the same time
+var syncCmdWg sync.WaitGroup
 var recWg sync.WaitGroup
 
 func init() {
@@ -49,6 +52,9 @@ func init() {
 	flag.StringVar(&commandFile, "cmd-file", "", "File to load commands from")
 	flag.BoolVar(&logs, "log", false, "Log output for each host to a seperate file")
 	flag.StringVar(&logLocation, "logdir", "", "Directory to write logs to. Default is current directory")
+
+	//configure logging
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
 
 func main() {
@@ -59,18 +65,17 @@ func main() {
 		password = promptPassword()
 	}
 
-	//ME list
-	// hosts sshKey password hostsFile
+	//Print warning that lists of CLI hosts are combined with the hosts file
 	if hosts != "" && hostsFile != "" {
 		log.Infoln("Combining command line hosts with host from host file")
 	}
 
+	//List warning that both methods will be tried if specified
 	if sshKey != "" && password != "" {
 		log.Infoln("Using both ssh key and password as auth methods")
 	}
 
-	//MB list
-	//commands and commandFile
+	//Print info message that notifies that both sets of commands will be used for logging
 	if commands != "" && commandFile != "" {
 		log.Infoln("Combining command line commands with command file command set")
 	}
@@ -99,8 +104,16 @@ func main() {
 		cmds = append(cmds, strings.Split(string(cmdFile), "\n")...)
 	}
 
+	//load CLI commands if specified
 	if commands != "" {
 		cmds = append(cmds, strings.Split(commands, ",")...)
+	}
+
+	//clean commands of extranious new lines
+	if len(cmds) > 0 {
+		for i := range cmds {
+			cmds[i] = strings.Replace(cmds[i], "\n", "", -1)
+		}
 	}
 
 	//setup hosts from file
@@ -147,24 +160,26 @@ func main() {
 	}
 
 	recWg.Add(1)
+	//setup listener for messages
 	go func() {
 		for {
 			select {
 			case msg, chanOpen := <-msgChannel:
 				if chanOpen && msg.Error != nil {
 					log.Errorf("Host: %s error: %s", msg.Host, msg.Error)
-					if msg.SessionID == 0 && msg.Command == "" {
-						connectWg.Done()
-					}
+				} else if chanOpen && msg.Data == "" && msg.SessionID != 0 && msg.Error == nil {
+					connectWg.Done()
+					log.Infof("Host: %s SessionID: %d connected", msg.Host, msg.SessionID)
 				} else if chanOpen && msg.Data != "" && msg.Host != "" {
 					if logs {
 						log.SetOutput(logFiles[msg.Host])
-						log.Printf("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
+						log.Infof("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
 						log.SetOutput(os.Stdout)
 					} else {
-						log.Printf("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
+						log.Infof("Host: %s SessionID: %d Command: %s\n%s", msg.Host, msg.SessionID, msg.Command, msg.Data)
 					}
-					commandWg.Done()
+					commandsWg.Done()
+					syncCmdWg.Done()
 				} else {
 					recWg.Done()
 					return
@@ -173,29 +188,35 @@ func main() {
 		}
 	}()
 
+	//establish connections to hosts
 	if len(hostps) > 0 {
 		for i := range hostps {
 			ctrlChans[hostps[i].Host] = make(chan Message)
 			connectWg.Add(1)
-			a := &Agent{HostProfile: hostps[i], connectWg: connectWg, CtrlChannel: ctrlChans[hostps[i].Host], MsgChannel: msgChannel}
+			a := &Agent{HostProfile: hostps[i], CtrlChannel: ctrlChans[hostps[i].Host], MsgChannel: msgChannel}
 			log.Println("Connecting to", hostps[i].Host)
 			go a.Run()
 		}
 	}
+
+	log.Infoln("Waiting for connections to establish...")
 	connectWg.Wait()
 	//Run command against hosts
-	for _, v := range cmds {
-		c := strings.Replace(v, "\n", "", -1)
+	log.Infoln("Issuing commands to hosts...")
+	for _, c := range cmds {
 		if len(c) > 3 {
 			for item := range ctrlChans {
-				commandWg.Add(1)
+				syncCmdWg.Add(1)
+				commandsWg.Add(1)
+				log.Infof("Host: %s Sending Command: %s", item, c)
 				ctrlChans[item] <- Message{Command: c}
 			}
 		}
+		syncCmdWg.Wait()
 	}
 
-	//return results
-	commandWg.Wait()
+	//wait until commands are all sent
+	commandsWg.Wait()
 	close(msgChannel)
 	for item := range ctrlChans {
 		close(ctrlChans[item])
