@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,11 +47,11 @@ func init() {
 	flag.StringVar(&user, "user", "", "Specify the username to use against hosts")
 	flag.StringVar(&password, "password", "", "Specify password to use with hosts")
 	flag.StringVar(&sshKey, "key", "", "Specify SSH key to use")
-	flag.BoolVar(&passPrompt, "prompt", false, "Promots the user to enter a password interactively")
+	flag.BoolVar(&passPrompt, "prompt", false, "Prompts the user to enter a password interactively")
 	flag.StringVar(&commands, "command", "", "Commands to run against host: \"show version\" or for multiple commands \"show version\",\"show chassis hardware\"")
 	flag.StringVar(&hostsFile, "hosts-file", "", "File to load hosts from")
 	flag.StringVar(&commandFile, "cmd-file", "", "File to load commands from")
-	flag.BoolVar(&logs, "log", false, "Log output for each host to a seperate file")
+	flag.BoolVar(&logs, "log", false, "Log output for each host to a separate file")
 	flag.StringVar(&logLocation, "logdir", "", "Directory to write logs to. Default is current directory")
 
 	//configure logging
@@ -123,10 +124,6 @@ func main() {
 			log.Fatalf("Unable to parse host file: %s", err)
 		}
 		hostps = append(hostps, h...)
-		for i := range h {
-			fmt.Printf("%#v\n", h[i])
-		}
-		hostps = append(hostps, h...)
 	}
 
 	//setup hosts
@@ -166,8 +163,19 @@ func main() {
 			select {
 			case msg, chanOpen := <-msgChannel:
 				if chanOpen && msg.Error != nil {
-					log.Errorf("Host: %s error: %s", msg.Host, msg.Error)
+					log.Errorf("Host: %s Error: %s", msg.Host, msg.Error)
+					//check for timeouts
+					if netError, ok := msg.Error.(net.Error); ok && netError.Timeout() {
+						for i := range hostps {
+							if hostps[i].Host == msg.Host {
+								hostps = append(hostps[:i], hostps[i+1:]...)
+								delete(ctrlChans, msg.Host)
+							}
+						}
+						connectWg.Done()
+					}
 				} else if chanOpen && msg.Data == "" && msg.SessionID != 0 && msg.Error == nil {
+					//remove host from command queue
 					connectWg.Done()
 					log.Infof("Host: %s SessionID: %d connected", msg.Host, msg.SessionID)
 				} else if chanOpen && msg.Data != "" && msg.Host != "" {
@@ -202,19 +210,20 @@ func main() {
 	log.Infoln("Waiting for connections to establish...")
 	connectWg.Wait()
 	//Run command against hosts
-	log.Infoln("Issuing commands to hosts...")
-	for _, c := range cmds {
-		if len(c) > 3 {
-			for item := range ctrlChans {
-				syncCmdWg.Add(1)
-				commandsWg.Add(1)
-				log.Infof("Host: %s Sending Command: %s", item, c)
-				ctrlChans[item] <- Message{Command: c}
+	if len(hostps) > 1 {
+		log.Infoln("Issuing commands to hosts...")
+		for _, c := range cmds {
+			if len(c) > 3 {
+				for item := range ctrlChans {
+					syncCmdWg.Add(1)
+					commandsWg.Add(1)
+					log.Infof("Host: %s Sending Command: %s", item, c)
+					ctrlChans[item] <- Message{Command: c}
+				}
 			}
+			syncCmdWg.Wait()
 		}
-		syncCmdWg.Wait()
 	}
-
 	//wait until commands are all sent
 	commandsWg.Wait()
 	close(msgChannel)
