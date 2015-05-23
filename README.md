@@ -4,8 +4,8 @@
  - Pull configurations
  - Gather support information
 
-[Releases](https://github.com/JNPRAutomate/jmcom/releases)
-[Issues](https://github.com/JNPRAutomate/jmcom/issues)
+- [Releases](https://github.com/JNPRAutomate/jmcom/releases)
+- [Issues](https://github.com/JNPRAutomate/jmcom/issues)
 
 When operating a large network it is common that you will need to run a massive set of commands across a large set of devices. Examples of this are checking route tables, pulling configurations, or rebooting devices. All of these tasks can easily be accomplished with the Junos Mass Commander or jmcom.
 
@@ -253,5 +253,5 @@ The logs will be written to the current directory that you are using. You can al
 
 #Acknowledgements
 
-Uses [gopass](https://github.com/howeyc/gopass) from Chris Howey/howeyc
-Uses [go-netconf](https://github.com/Juniper/go-netconf) from Juniper Networks
+- Uses [gopass](https://github.com/howeyc/gopass) from Chris Howey/howeyc
+- Uses [go-netconf](https://github.com/Juniper/go-netconf) from Juniper Networks
