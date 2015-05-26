@@ -17,9 +17,9 @@ This tool is designed to run the following command types: show, request. Some co
 
 **Since you can use this tool to execute a massive ammount of commands extremly quicky please test the command sets you want to run! It is possible to blow up your entire network by rebooting all devices at once. It will only do what you ask it to do.**
 
-If you run into specific commands that seem to hang the session, something that provides strange behavior, or generally stangeness please file an (issue)[https://github.com/JNPRAutomate/jmcom/issues]. 
+If you run into specific commands that seem to hang the session, something that provides strange behavior, or generally stangeness please file an [issue](https://github.com/JNPRAutomate/jmcom/issues). 
 
-Due to the way that jmcom operates it is not designed ot do configuration steps. That will be done in a seperate project (Junos Mass Configurer)[https://github.com/JNPRAutomate/jmcfg].
+Due to the way that jmcom operates it is not designed ot do configuration steps. That will be done in a seperate project [Junos Mass Configurer](https://github.com/JNPRAutomate/jmcfg).
 
 # Command line options
 jmcom is a command line tool and it can be run from Windows, Mac, or Linux. It requires the use of command line flags to specify three elements: User credentials, commands, and hosts.
