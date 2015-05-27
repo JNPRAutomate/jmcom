@@ -1,4 +1,7 @@
 # Junos Mass Commander
+
+When operating a large network it is common that you will need to run a massive set of commands across a large set of devices. Examples of this are checking route tables, pulling configurations, or rebooting devices. All of these tasks can easily be accomplished with the Junos Mass Commander or jmcom. Some tasks that can accomplished with Junos Mass Commander:
+
  - Send commands to multiple hosts at the same time
     - All commands are issued to all connected devices simultaneously
     - It gives you the ability to check the state of multiple devices at the exact same time
@@ -9,27 +12,27 @@
 - [Releases](https://github.com/JNPRAutomate/jmcom/releases)
 - [Issues](https://github.com/JNPRAutomate/jmcom/issues)
 
-When operating a large network it is common that you will need to run a massive set of commands across a large set of devices. Examples of this are checking route tables, pulling configurations, or rebooting devices. All of these tasks can easily be accomplished with the Junos Mass Commander or jmcom.
+
 
 ### Limitations
 
 This tool is designed to run the following command types: show, request. Some commands are not supported via NETCONF such as loading licenses or file copies. 
 
-**Since you can use this tool to execute a massive ammount of commands extremly quicky please test the command sets you want to run! It is possible to blow up your entire network by rebooting all devices at once. It will only do what you ask it to do.**
+**Since you can use this tool to execute a massive amount of commands extremely quickly please test the command sets you want to run! It is possible to blow up your entire network by rebooting all devices at once. It will only do what you ask it to do.**
 
 If you run into specific commands that seem to hang the session, something that provides strange behavior, or generally stangeness please file an [issue](https://github.com/JNPRAutomate/jmcom/issues). 
 
-Due to the way that jmcom operates it is not designed ot do configuration steps. That will be done in a seperate project [Junos Mass Configurer](https://github.com/JNPRAutomate/jmcfg).
+Due to the way that jmcom operates it is not designed to do configuration steps. That will be done in a seperate project [Junos Mass Configurer](https://github.com/JNPRAutomate/jmcfg).
 
 # Command line options
-jmcom is a command line tool and it can be run from Windows, Mac, or Linux. It requires the use of command line flags to specify three elements: User credentials, commands, and hosts.
+jmcom is a command line tool and it can be run from Windows, Mac, or Linux. It requires the use of command line flags to specify three elements: user credentials, commands, and hosts.
 
 - The user credentials consists of a username and either a password or an SSH Key
 - Passwords can be specified at the command line or be prompted to enter it
-- The same username, password, and ssh host key
+- The same username, password, and ssh host key TODO: are you saying it can use ...
 - Hosts can be specified by a hostname or an IP address
-- You can log the output of each host to a single file or to a file per devices
-- Logs are appended to in the event they already exist
+- You can log the output of each host to a single file or to a file per devices TODO: not sure on the difference
+- Logs are appended to an event they already exists
 - Commands are sent to all of the connected hosts at the same time
     - This helps if you are troubleshooting an issue and need to gather the exact state at the exact moment
 
