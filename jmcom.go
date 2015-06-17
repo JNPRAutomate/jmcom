@@ -201,7 +201,7 @@ func main() {
 		for i := range hostps {
 			ctrlChans[hostps[i].Host] = make(chan Message)
 			connectWg.Add(1)
-			a := &Agent{HostProfile: hostps[i], CtrlChannel: ctrlChans[hostps[i].Host], MsgChannel: msgChannel}
+			a := &Agent{Mode: AgentModeOp, HostProfile: hostps[i], CtrlChannel: ctrlChans[hostps[i].Host], MsgChannel: msgChannel}
 			log.Println("Connecting to", hostps[i].Host)
 			go a.Run()
 		}

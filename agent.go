@@ -7,6 +7,14 @@ import (
 	"github.com/Juniper/go-netconf/netconf"
 )
 
+const (
+	AgentModeNull   = 0
+	AgentModeOp     = 1
+	AgentModeConfig = 2
+)
+
+type AgentMode int
+
 //Agent agent to connect and issue commands to hosts
 type Agent struct {
 	SessionID   int
@@ -15,6 +23,7 @@ type Agent struct {
 	CtrlChannel chan Message
 	MsgChannel  chan Message
 	parser      Parser
+	Mode        AgentMode
 }
 
 //Run set agent to run commands
