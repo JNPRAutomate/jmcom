@@ -8,9 +8,10 @@ type Agent interface {
 	RunCommand(string)
 	// Close close the connection to the agent
 	Close()
-	// Dial connect to the agent
-	Dial()
-	// dial
-	dial()
+	// Dial connect to the remote host
+	Dial() error
+	// dial connection or where all the good stuff happens
+	dial() error
+	// returnMsg  return a response back to the message channel
 	returnMsg(string, string, error)
 }

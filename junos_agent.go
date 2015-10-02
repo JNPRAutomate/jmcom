@@ -59,8 +59,9 @@ func (a *JunosAgent) Run() {
 	}
 }
 
+// Dial connect to the remote host
 func (a *JunosAgent) Dial() error {
-	a.dial()
+	return a.dial()
 }
 
 // dial connect to host
