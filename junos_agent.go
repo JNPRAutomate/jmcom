@@ -8,6 +8,14 @@ import (
 )
 
 const (
+	// CfgTypeNull the default type for CfgType
+	CfgTypeNull = 0
+)
+
+// CfgType configuration type
+type CfgType int
+
+const (
 	// JunosAgentModeNull the default mode for an JunosAgent
 	JunosAgentModeNull = 0
 	// JunosAgentModeOp enters the JunosAgent into operational mode
@@ -91,10 +99,22 @@ func (a *JunosAgent) returnMsg(data string, command string, err error) {
 
 // RunCommand Run a command against a host
 func (a *JunosAgent) RunCommand(command string) {
-	reply, err := a.Session.Exec(netconf.RawMethod(fmt.Sprintf("<command format=\"ascii\">%s</command>", command)))
+	r, err := a.Session.Exec(netconf.RawMethod(fmt.Sprintf("<command format=\"ascii\">%s</command>", command)))
 	if err != nil {
-		a.returnMsg(reply.Data, command, err)
+		a.returnMsg(r.Data, command, err)
 	}
-	v := a.parser.Trim(reply.Data)
+	v := a.parser.Trim(r.Data)
 	a.returnMsg(v, command, err)
+}
+
+// LoadConfig load a set of configuration data to the device
+func (a *JunosAgent) LoadConfig(config string, cfgType CfgType, overwrite bool) {
+	// pull the config to the agent
+	// open the configuration mode
+	// commit the configuration
+	r, err := a.Session.Exec(netconf.RawMethod(fmt.Sprintf("", config)))
+	if err != nil {
+		a.returnMsg(r.Data, "config", err)
+	}
+	a.returnMsg(r.Data, "config", err)
 }
