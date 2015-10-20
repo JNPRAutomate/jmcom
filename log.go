@@ -6,15 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/kardianos/osext"
 )
 
 //OpenLog open log file for writing
 func OpenLog(path string, filename string) (*os.File, error) {
 	if path == "" {
 		//use current directory
-		curdir, err := osext.ExecutableFolder()
+		curdir, err := os.Getwd()
 		if err != nil {
 			log.Fatalln(err)
 		}
