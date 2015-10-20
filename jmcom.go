@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,15 +164,15 @@ func main() {
 				if chanOpen && msg.Error != nil {
 					log.Errorf("Host: %s Error: %s", msg.Host, msg.Error)
 					//check for timeouts
-					if netError, ok := msg.Error.(net.Error); ok && netError.Timeout() {
-						for i := range hostps {
-							if hostps[i].Host == msg.Host {
-								hostps = append(hostps[:i], hostps[i+1:]...)
-								delete(ctrlChans, msg.Host)
-							}
+					//if netError, ok := msg.Error.(net.Error); ok && netError.Timeout() {
+					//}
+					for i := range hostps {
+						if hostps[i].Host == msg.Host {
+							hostps = append(hostps[:i], hostps[i+1:]...)
+							delete(ctrlChans, msg.Host)
 						}
-						connectWg.Done()
 					}
+					connectWg.Done()
 				} else if chanOpen && msg.Data == "" && msg.SessionID != 0 && msg.Error == nil {
 					//remove host from command queue
 					connectWg.Done()
@@ -198,6 +197,7 @@ func main() {
 
 	//establish connections to hosts
 	if len(hostps) > 0 {
+		log.Infoln("Waiting for connections to establish...")
 		for i := range hostps {
 			ctrlChans[hostps[i].Host] = make(chan Message)
 			connectWg.Add(1)
@@ -205,12 +205,11 @@ func main() {
 			log.Println("Connecting to", hostps[i].Host)
 			go a.Run()
 		}
+		connectWg.Wait()
 	}
 
-	log.Infoln("Waiting for connections to establish...")
-	connectWg.Wait()
 	//Run command against hosts
-	if len(hostps) > 1 {
+	if len(hostps) >= 1 {
 		log.Infoln("Issuing commands to hosts...")
 		for _, c := range cmds {
 			if len(c) > 3 {
@@ -231,7 +230,7 @@ func main() {
 		close(ctrlChans[item])
 	}
 	recWg.Wait()
-	if len(ctrlChans) == 0 {
+	if len(ctrlChans) == 0 && hosts == "" {
 		//no connections initiated, the user needs help
 		flag.PrintDefaults()
 		return
