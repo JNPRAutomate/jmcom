@@ -6,19 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/crypto/ssh"
-
 	"github.com/howeyc/gopass"
 )
 
-//HostFileParser used for parsing CSV files
+// HostFileParser used for parsing CSV files
 type HostFileParser struct {
 	GlobalPassword string
 	GlobalKey      string
 	Hosts          []HostProfile
 }
 
-//Parse parse
+// Parse parse the hostfile
 func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 	hostP := []*HostProfile{}
 	fl, err := filepath.Abs(file)
@@ -34,7 +32,7 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 		if len(hostFiles[i]) > 1 {
 			if string(hostFiles[i][0]) != "#" {
 				line := strings.Split(hostFiles[i], ",")
-				//host,username,password,keyfile
+				// host,username,password,keyfile
 				hProfile := &HostProfile{}
 				for l := range line {
 					if line[l] != "" {
@@ -54,7 +52,7 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 						}
 					}
 				}
-				//load the global key and or password if not methids are specified
+				// load the global key and or password if not methids are specified
 				if len(hProfile.AuthMethods) == 0 {
 					if hp.GlobalKey != "" {
 						hProfile.LoadKey(hp.GlobalKey)
@@ -70,44 +68,9 @@ func (hp *HostFileParser) Parse(file string) ([]*HostProfile, error) {
 	return hostP, nil
 }
 
-//PasswordPrompt prompt a user for an interactive password
+// PasswordPrompt prompt a user for an interactive password
 func (hp *HostFileParser) PasswordPrompt(hostname string) string {
 	fmt.Printf("Enter password for %s: ", hostname)
 	text := gopass.GetPasswdMasked()
 	return string(text)
-}
-
-//HostProfile used as a profile for host configurations
-type HostProfile struct {
-	Username    string
-	Host        string
-	AuthMethods []ssh.AuthMethod
-}
-
-//LoadKey load SSH key into auth methods
-func (p *HostProfile) LoadKey(key string) error {
-	fl, err := filepath.Abs(key)
-	if err != nil {
-		return err
-	}
-	f, err := ioutil.ReadFile(fl)
-	if err != nil {
-		return err
-	}
-	k, err := ssh.ParsePrivateKey(f)
-	if err != nil {
-		return err
-	}
-	p.AuthMethods = append(p.AuthMethods, ssh.PublicKeys(k))
-	return nil
-}
-
-//LoadPassword load a password into auth methods
-func (p *HostProfile) LoadPassword(password string) {
-	p.AuthMethods = append(p.AuthMethods, ssh.Password(password))
-}
-
-//GetSSHClientConfig generates an ssh.ClientConfig to be use for SSH authentication
-func (p *HostProfile) GetSSHClientConfig() *ssh.ClientConfig {
-	return &ssh.ClientConfig{User: p.Username, Auth: p.AuthMethods}
 }

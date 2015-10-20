@@ -16,11 +16,11 @@ When operating a large network it is common that you will need to run a massive 
 
 ### Limitations
 
-This tool is designed to run the following command types: show, request. Some commands are not supported via NETCONF such as loading licenses or file copies. 
+This tool is designed to run the following command types: show, request. Some commands are not supported via NETCONF such as loading licenses or file copies.
 
 **Since you can use this tool to execute a massive amount of commands extremely quickly please test the command sets you want to run! It is possible to blow up your entire network by rebooting all devices at once. It will only do what you ask it to do.**
 
-If you run into specific commands that seem to hang the session, something that provides strange behavior, or generally stangeness please file an [issue](https://github.com/JNPRAutomate/jmcom/issues). 
+If you run into specific commands that seem to hang the session, something that provides strange behavior, or generally strangeness please file an [issue](https://github.com/JNPRAutomate/jmcom/issues).
 
 Due to the way that jmcom operates it is not designed to do configuration steps. That will be done in a seperate project [Junos Mass Configurer](https://github.com/JNPRAutomate/jmcfg).
 
