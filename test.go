@@ -7,8 +7,8 @@ import (
 )
 
 func foo() {
-	username := "root"
-	password := "Embe1mpls"
+	username := "xxxxx"
+	password := "xxxxxx"
 	host := "172.19.100.49"
 
 	s, err := netconf.DialSSH(host, netconf.SSHConfigPassword(username, password))
